@@ -1,0 +1,30 @@
+<div class="row">
+<form method="post" action="/export">
+    <div class="col-md-6 mb-3">
+        <label for="spreadsheet_id" class="form-label">Spreadsheet ID</label>
+        <input type="text" class="form-control" name="spreadsheet_id" id="spreadsheet_id" value="11ekBOzBK7A3fbvCvWTZnJYtwARL0tKMpnL_DOufaVBs">
+    </div>
+    <div class="col-md-6 mb-3">
+        <label for="range" class="form-label">Range</label>
+        <input type="text" class="form-control" name="range" id="range">
+    </div>
+    <div class="col-md-6 mb-3">
+        <label for="cat_id" class="form-label">Category ID</label>
+        <select class="form-select" id="cat_id" name="cat_id" aria-label="Default select example">
+            <option selected>Open this select menu</option>
+            {{#each categories}}
+                <option value="{{this.cat_id}}">{{this.program_studi}} - {{this.cat_id}}</option>
+            {{/each}}
+        </select>
+    </div>
+    <div class="col-md-6 mb-3">
+        <label for="start_date" class="form-label">Start Date</label>
+        <input type="date" class="form-control" name="start_date" id="start_date" value="2024-04-03">
+    </div>
+    <div class="col-md-6 mb-3">
+        <label for="end_date" class="form-label">End Date</label>
+        <input type="date" class="form-control" name="end_date" id="end_date" value="2031-04-03">
+    </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+</form>
+</div>
