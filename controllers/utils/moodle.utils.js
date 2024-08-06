@@ -1,17 +1,23 @@
 const axios = require('axios');
+const https = require('https');
 
-const {token} = require('../secrets/tokens.json');
+const agent = new https.Agent({
+    rejectUnauthorized: false  // Skip certificate verification
+});
+
+const {token} = require('../../secrets/tokens.json');
 const MOODLE_URL = 'https://elearning.pnj.ac.id/webservice/rest/server.php';
 
 const makeMoodleRequest = async (wsfunction, params) => {
     try {
         const response = await axios.post(MOODLE_URL, null, {
             params: {
-                wstoken: TOKEN,
+                wstoken: token,
                 wsfunction: wsfunction,
                 moodlewsrestformat: 'json',
                 ...params
-            }
+            },
+            httpsAgent: agent
         });
         return response.data;
     } catch (error) {
@@ -20,7 +26,7 @@ const makeMoodleRequest = async (wsfunction, params) => {
     }
 };
 
-export const createCourse = async (name, categoryId, summary = `Course E-Learning ${name}`) => {
+exports.createCourse = async (name, categoryId, summary = `Course E-Learning ${name}`) => {
     const params = {
         courses: [
             {
@@ -36,15 +42,16 @@ export const createCourse = async (name, categoryId, summary = `Course E-Learnin
     return response[0].id;
 };
 
-export const createEnrollmentKey = async (courseId, roleId, enrolmentKey) => {
+exports.createCourseCategory = async (name,parent, description = `Kategori untuk ${name}`) => {
     const params = {
-        enrolments: [
+        categories: [
             {
-                roleid: roleId,
-                courseid: courseId,
-                enrolmentkey: enrolmentKey
+                name: name,
+                parent: parent,
+                description: description
             }
         ]
     };
-    await makeMoodleRequest('enrol_manual_enrol_users', params);
+    const response = await makeMoodleRequest('core_course_create_categories', params);
+    return response[0].id;
 };

@@ -1,0 +1,28 @@
+<div class="row">
+    <h2>Your courses will be deployed for: {{category}}</h2>
+    <h2>Enrolment Start Date: {{enrolmentStartDate}}</h2>
+    <h2>Enrolment End Date: {{enrolmentEndDate}}</h2>
+    <h2>Course start date will be the same as <b>Enrolment Start Date</b></h2>
+    <p>Please double check category by clicking this <a target="_blank" href="https://elearning.pnj.ac.id/course/index.php?categoryid={{category_id}}">link</a></p>
+    <br />
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>No.</th>
+                <th>Course Name</th>
+                <th>Enrolment Key Dosen</th>
+                <th>Enrolment Key Mahasiswa</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#each rows}}
+                <tr>
+                    <td>{{@index}}</td>
+                    <td>{{this.[0]}}</td>
+                    <td>{{this.[1]}}</td>
+                    <td>{{this.[2]}}</td>
+                </tr>
+            {{/each}}
+        </tbody>
+    </table>
+</div>
