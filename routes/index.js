@@ -13,5 +13,6 @@ router.post('/export', checkSession, exportController.exportData);
 
 router.get('/export/createcat', checkSession, exportController.createCategory)
 router.post('/export/dryrun', checkSession, exportController.renderDryRunPage)
+router.post('/export/run', checkSession, exportController.createCourses)
 
 module.exports = router;

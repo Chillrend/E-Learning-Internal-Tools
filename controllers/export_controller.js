@@ -2,7 +2,8 @@ const {createObjectCsvStringifier} = require('csv-writer');
 const moment = require('moment');
 const categories = require('../secrets/categories.json');
 const {getRows} = require('./utils/googlesheet.utils')
-const {createCourseCategory} = require('./utils/moodle.utils')
+const {createCourseCategory, createCourse} = require('./utils/moodle.utils')
+const {createSelfEnrollment} = require('./utils/moodle_db.utils')
 const fs = require('fs');
 const path = require('path');
 
@@ -114,6 +115,49 @@ exports.renderDryRunPage = async (req, res, next) => {
         console.error('Error fetching data from Google Sheets:', error);
         res.status(500).send('Error fetching data from Google Sheets');
     }
+};
+
+exports.createCourses = async (req, res, next) => {
+    const category = categories.find(c => c.cat_id === parseInt(req.body.cat_id))
+    if (!category) {
+        return res.status(404).send('Category not found');
+    }
+    const start_date = req.body.start_date
+    const end_date = req.body.end_date
+
+    let log = `Creating courses for ${category.program_studi}, if one or two courses fails, please create it manually later`;
+
+
+    let rows = await getRows(req.session.tokens, req.body.spreadsheet_id, req.body.range)
+
+    for (let i = 0; i < rows.length; i++) {
+        const course = await createCourse(rows[i][0], category.academic_year_cat_id)
+        if (course) {
+            rows[i][3] = `<a href="https://elearning.pnj.ac.id/course/view.php?id=${course}">${rows[i][0]}</a>`
+        } else {
+            rows[i][3] = `FAILED! ${rows[i][0]}`
+            continue;
+        }
+
+        console.log(`Creating enrolment for dosen for ${rows[i][0]}, enrolment key: ${rows[i][1]}`);
+        const enrolment_key_dosen = await createSelfEnrollment(course, 3, rows[i][1], `Teacher for ${rows[i][0]}`);
+        rows[i][4] = enrolment_key_dosen ? `${rows[i][1]}` : `FAIL! ${rows[i][1]}`
+
+        console.log(`Creating enrolment for mhs for ${rows[i][0]}, enrolment key: ${rows[i][2]}`);
+        const enrolment_key_mhs = await createSelfEnrollment(course, 5, rows[i][2], `Student for ${rows[i][0]}`);
+        rows[i][5] = enrolment_key_mhs ? `${rows[i][2]}` : `FAIL! ${rows[i][2]}`
+    }
+
+    res.render('run', {
+        title: 'E-Learning Script Generator',
+        rows: rows,
+        category: `${category.program_studi}, Category ID in e-learning: ${category.academic_year_cat_id}`,
+        category_id: category.academic_year_cat_id,
+        enrolmentStartDate: start_date,
+        enrolmentEndDate: end_date
+    });
+
+
 };
 
 const getSemester = () => {

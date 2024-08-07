@@ -33,13 +33,20 @@ exports.createCourse = async (name, categoryId, summary = `Course E-Learning ${n
                 fullname: name,
                 shortname: name,
                 categoryid: categoryId,
-                summary: summary
+                summary: summary,
+                numsections: 16
             }
         ]
     };
 
     const response = await makeMoodleRequest('core_course_create_courses', params);
-    return response[0].id;
+
+    if(response[0].id){
+        return response[0].id;
+    }else{
+        console.error("Failed creating course: ", response.message)
+        return false
+    }
 };
 
 exports.createCourseCategory = async (name,parent, description = `Kategori untuk ${name}`) => {

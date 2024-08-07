@@ -7,23 +7,22 @@ const dbConfig = {
     database: process.env.DB_DATABASE,
 };
 
-export const createSelfEnrollment = async (courseId, roleId, enrolmentKey, name) => {
+exports.createSelfEnrollment = async (courseId, roleId, enrolmentKey, name) => {
     const connection = await mysql.createConnection(dbConfig);
 
     try {
         // Insert self enrollment method into the 'mdl_enrol' table
         const [result] = await connection.execute(
-            `INSERT INTO mdl_enrol (enrol, courseid, customint6, customchar1, roleid, name, status)
-       VALUES ('self', ?, 1, ?, ?, ?, 0)`,
+            `INSERT INTO mdl_enrol (enrol, courseid, customint4, customint6, password, roleid, name, status)
+       VALUES ('self', ?, 1, 1, ?, ?, ?, 0)`,
             [courseId, enrolmentKey, roleId, name]
         );
 
         console.log('Self-enrollment method added with ID:', result.insertId);
         return result.insertId;
     } catch (error) {
-
         console.error('Error inserting self-enrollment method:', error.message);
-        return error.message;
+        return false;
     } finally {
         await connection.end();
     }
