@@ -125,13 +125,16 @@ exports.createCourses = async (req, res, next) => {
     const start_date = req.body.start_date
     const end_date = req.body.end_date
 
-    let log = `Creating courses for ${category.program_studi}, if one or two courses fails, please create it manually later`;
+    let date = new Date(start_date);
 
+    let timestampInSeconds = Math.floor(date.getTime() / 1000);
+    console.log(timestampInSeconds);
 
     let rows = await getRows(req.session.tokens, req.body.spreadsheet_id, req.body.range)
 
     for (let i = 0; i < rows.length; i++) {
-        const course = await createCourse(rows[i][0], category.academic_year_cat_id)
+        const course = await createCourse(rows[i][0], category.academic_year_cat_id, timestampInSeconds)
+        rows[i][6] = `<a target="_blank" class="btn btn-info" href="/export/createOneCourse?course_name=${rows[i][0]}&category=${category.academic_year_cat_id}">Create Course</a>`
         if (course) {
             rows[i][3] = `<a href="https://elearning.pnj.ac.id/course/view.php?id=${course}">${rows[i][0]}</a>`
         } else {
@@ -141,10 +144,22 @@ exports.createCourses = async (req, res, next) => {
 
         console.log(`Creating enrolment for dosen for ${rows[i][0]}, enrolment key: ${rows[i][1]}`);
         const enrolment_key_dosen = await createSelfEnrollment(course, 3, rows[i][1], `Teacher for ${rows[i][0]}`);
-        rows[i][4] = enrolment_key_dosen ? `${rows[i][1]}` : `FAIL! ${rows[i][1]}`
+
+        if(enrolment_key_dosen) {
+            rows[i][4] = rows[i][1];
+        }else {
+            rows[i][4] =`FAIL! ${rows[i][1]}`;
+        }
+        rows[i][7] = `<a target="_blank" class="btn btn-info" href="/export/createSelfEnrolment?course_id=${course}&role_id=3&password=${rows[i][1]}&role_name=Teacher">Create Dosen Key</a>`
 
         console.log(`Creating enrolment for mhs for ${rows[i][0]}, enrolment key: ${rows[i][2]}`);
         const enrolment_key_mhs = await createSelfEnrollment(course, 5, rows[i][2], `Student for ${rows[i][0]}`);
+        if(enrolment_key_mhs) {
+            rows[i][5] = rows[i][2];
+        }else {
+            rows[i][5] =`FAIL! ${rows[i][2]}`;
+        }
+        rows[i][8] = `<a target="_blank" class="btn btn-info" href="/export/createSelfEnrolment?course_id=${course}&role_id=5&password=${rows[i][2]}&role_name=Student">Create Mhs Key</a>`
         rows[i][5] = enrolment_key_mhs ? `${rows[i][2]}` : `FAIL! ${rows[i][2]}`
     }
 
@@ -156,8 +171,34 @@ exports.createCourses = async (req, res, next) => {
         enrolmentStartDate: start_date,
         enrolmentEndDate: end_date
     });
+};
 
+exports.createOneCourse = async (req, res, next) => {
+    const course_name = req.query.course_name;
+    const category = req.query.category;
 
+    const course = await createCourse(course_name, category);
+
+    if(course){
+        res.json({success: true, course_id: course})
+    }else{
+        res.json({success: false})
+    }
+};
+
+exports.createSelfEnrolment = async (req, res, next) => {
+    const course_id = req.params.course_id;
+    const role_id = req.params.role_id;
+    const password = req.params.password;
+    const role_name = req.params.role_name;
+
+    const self_enrolment_id = await createSelfEnrollment(course_id, role_id, password, `Self Enrolment for ${role_name}`);
+
+    if(self_enrolment_id){
+        res.json({success: true, self_enrolment_key: key})
+    }else{
+        res.json({success: false})
+    }
 };
 
 const getSemester = () => {

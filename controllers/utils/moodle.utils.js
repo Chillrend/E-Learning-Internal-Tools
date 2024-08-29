@@ -26,13 +26,14 @@ const makeMoodleRequest = async (wsfunction, params) => {
     }
 };
 
-exports.createCourse = async (name, categoryId, summary = `Course E-Learning ${name}`) => {
+exports.createCourse = async (name, categoryId, startDate, summary = `Course E-Learning ${name}`) => {
     const params = {
         courses: [
             {
                 fullname: name,
                 shortname: name,
                 categoryid: categoryId,
+                startdate: startDate,
                 summary: summary,
                 numsections: 16
             }
@@ -41,7 +42,7 @@ exports.createCourse = async (name, categoryId, summary = `Course E-Learning ${n
 
     const response = await makeMoodleRequest('core_course_create_courses', params);
 
-    if(response[0].id){
+    if(response[0] !== undefined){
         return response[0].id;
     }else{
         console.error("Failed creating course: ", response.message)
