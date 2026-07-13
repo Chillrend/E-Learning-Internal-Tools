@@ -4,17 +4,33 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 const session = require('express-session');
 const logger = require('morgan');
+const hbs = require('hbs');
 const env = require('dotenv').config();
 
+// Initialize SQLite database (runs schema + seed on first load)
+require('./db');
 
 const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
 
 const app = express();
 
+// Make MOODLE_BASE_URL available to all Handlebars templates
+app.locals.MOODLE_BASE_URL = process.env.MOODLE_BASE_URL || 'https://elearning.pnj.ac.id';
+
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'hbs');
+
+// Register partials directory
+hbs.registerPartials(path.join(__dirname, 'views', 'partials'));
+
+// Register custom Handlebars helpers
+hbs.registerHelper('sum', (a, b) => a + b);
+hbs.registerHelper('multiply', (a, b) => a * b);
+hbs.registerHelper('ifEquals', function (a, b, options) {
+    return a === b ? options.fn(this) : options.inverse(this);
+});
 
 app.use(logger('dev'));
 app.use(express.json());

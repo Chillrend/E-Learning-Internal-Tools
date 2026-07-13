@@ -3,7 +3,7 @@ const secrets = require('../secrets/clients.json');
 
 const CLIENT_ID = secrets.web.client_id;
 const CLIENT_SECRET = secrets.web.client_secret;
-const REDIRECT_URI = secrets.web.redirect_uris[1];
+const REDIRECT_URI = process.env.GOOGLE_AUTH_CALLBACK_URL || secrets.web.redirect_uris[1];
 const SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"];
 const oAuth2Client = new OAuth2Client(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
 
@@ -27,7 +27,7 @@ exports.loginCallback = async (req, res) => {
 
         // Save tokens to database or session for future use
         req.session.tokens = tokens;
-        res.redirect('/export');
+        res.redirect('/courses');
     } catch (error) {
         console.error('Error authenticating with Google:', error);
         res.status(500).send('Error authenticating with Google');

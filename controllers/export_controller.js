@@ -131,12 +131,13 @@ exports.createCourses = async (req, res, next) => {
     console.log(timestampInSeconds);
 
     let rows = await getRows(req.session.tokens, req.body.spreadsheet_id, req.body.range)
+    const MOODLE_BASE_URL = process.env.MOODLE_BASE_URL || 'https://elearning.pnj.ac.id';
 
     for (let i = 0; i < rows.length; i++) {
         const course = await createCourse(rows[i][0], category.academic_year_cat_id, timestampInSeconds)
         rows[i][6] = `<a target="_blank" class="btn btn-info" href="/export/createOneCourse?course_name=${rows[i][0]}&category=${category.academic_year_cat_id}">Create Course</a>`
         if (course) {
-            rows[i][3] = `<a href="https://elearning.pnj.ac.id/course/view.php?id=${course}">${rows[i][0]}</a>`
+            rows[i][3] = `<a href="${MOODLE_BASE_URL}/course/view.php?id=${course}">${rows[i][0]}</a>`
         } else {
             rows[i][3] = `FAILED! ${rows[i][0]}`
             continue;

@@ -1,0 +1,91 @@
+<!-- Breadcrumb -->
+<nav class="mb-6 animate-fade-in">
+    <ol class="flex items-center gap-2 text-sm text-slate-400">
+        <li><a href="/courses" class="hover:text-white transition-colors">Dashboard</a></li>
+        <li><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg></li>
+        <li><a href="/courses/{{category.id}}" class="hover:text-white transition-colors">{{category.program_studi}}</a></li>
+        <li><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg></li>
+        <li class="text-white font-medium">Add Courses</li>
+    </ol>
+</nav>
+
+<!-- Header -->
+<div class="mb-8 animate-fade-in stagger-1">
+    <h1 class="text-2xl font-bold text-white">Add Courses</h1>
+    <p class="mt-1 text-slate-400">Create courses for <span class="text-indigo-300">{{category.program_studi}}</span></p>
+</div>
+
+<!-- Form -->
+<div class="animate-fade-in stagger-2">
+    <form method="POST" action="/courses/{{category.id}}/add" id="addCourseForm" class="max-w-2xl">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-6">
+
+            <!-- Mata Kuliah -->
+            <div>
+                <label for="mata_kuliah" class="block text-sm font-medium text-slate-300 mb-1.5">Mata Kuliah</label>
+                <input type="text" name="mata_kuliah" id="mata_kuliah"
+                       placeholder="e.g., Pemrograman Web"
+                       class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow"
+                       required>
+                <p class="mt-1 text-xs text-slate-500">The subject/course name.</p>
+            </div>
+
+            <!-- Generate Multiple Toggle -->
+            <div class="flex items-center gap-3">
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" name="generate_multiple" id="generateMultiple" class="sr-only peer" checked>
+                    <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                </label>
+                <span class="text-sm font-medium text-slate-300">Generate multiple classes</span>
+            </div>
+
+            <!-- Nama Kelas Pattern (shown when multiple) -->
+            <div id="patternGroup">
+                <label for="nama_kelas_pattern" class="block text-sm font-medium text-slate-300 mb-1.5">Nama Kelas Pattern</label>
+                <input type="text" name="nama_kelas_pattern" id="nama_kelas_pattern"
+                       placeholder="e.g., Pemrograman Web 2{X}"
+                       class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow"
+                       required>
+                <p class="mt-1 text-xs text-slate-500">
+                    Use <code class="px-1.5 py-0.5 rounded bg-slate-800 text-indigo-300 border border-slate-700">{X}</code>
+                    as the placeholder for the class letter (A, B, C...). When "generate multiple" is off, this becomes the literal class name.
+                </p>
+            </div>
+
+            <!-- Class Count (shown when multiple) -->
+            <div id="countGroup">
+                <label for="class_count" class="block text-sm font-medium text-slate-300 mb-1.5">Number of Classes</label>
+                <input type="number" name="class_count" id="class_count" min="1" max="26" value="3"
+                       class="w-32 px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow">
+                <p class="mt-1 text-xs text-slate-500">How many class sections to generate (1–26).</p>
+            </div>
+
+            <!-- Live Preview -->
+            <div id="previewSection">
+                <label class="block text-sm font-medium text-slate-300 mb-1.5">Preview</label>
+                <div id="previewContainer" class="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 min-h-[60px]">
+                    <div id="previewContent" class="flex flex-wrap gap-2">
+                        <span class="text-sm text-slate-500 italic">Start typing to see the preview...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit -->
+        <div class="mt-6 flex items-center gap-3">
+            <button type="submit"
+                    class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 text-white font-medium text-sm hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-500/20 cursor-pointer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Add to Staging
+            </button>
+            <a href="/courses/{{category.id}}"
+               class="px-5 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white transition-colors">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+<script src="/javascripts/course-form.js"></script>

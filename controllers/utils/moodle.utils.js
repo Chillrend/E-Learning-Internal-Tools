@@ -6,7 +6,8 @@ const agent = new https.Agent({
 });
 
 const {token} = require('../../secrets/tokens.json');
-const MOODLE_URL = 'https://elearning.pnj.ac.id/webservice/rest/server.php';
+const MOODLE_BASE_URL = process.env.MOODLE_BASE_URL || 'https://elearning.pnj.ac.id';
+const MOODLE_URL = `${MOODLE_BASE_URL}/webservice/rest/server.php`;
 
 const makeMoodleRequest = async (wsfunction, params) => {
     try {
