@@ -1,0 +1,8 @@
+node_modules
+npm-debug.log
+.idea
+.git
+.env
+data/elearning.db
+data/elearning.db-wal
+data/elearning.db-shm

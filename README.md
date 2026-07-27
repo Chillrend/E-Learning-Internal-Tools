@@ -60,6 +60,20 @@ An internal web application designed to manage, stage, and automate the bulk dep
    npm start
    ```
 
+## Docker Deployment
+
+You can easily run the application using Docker and Docker Compose. This ensures a consistent environment and simplifies setup.
+
+1. **Configure Environment Variables**:
+   Ensure your `.env` and `secrets/clients.json` are properly configured.
+2. **Run with Docker Compose**:
+   ```bash
+   docker-compose up -d --build
+   ```
+   The application will be available at `http://localhost:3000`. 
+   
+   The `data/` and `secrets/` directories are mapped as volumes to ensure your SQLite database and credentials persist across container restarts.
+
 ## Production Deployment
 
 If you are deploying this application to a production environment with a custom domain:
