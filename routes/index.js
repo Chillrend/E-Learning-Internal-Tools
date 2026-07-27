@@ -9,6 +9,7 @@ const checkSession = require('../middleware/session_check');
 router.get('/', authController.index);
 router.get('/login/redirect', authController.loginRedirect);
 router.get('/login/callback', authController.loginCallback);
+router.get('/forbidden', authController.forbidden);
 
 // Legacy export routes
 router.get('/export', checkSession, exportController.renderExportPage);
