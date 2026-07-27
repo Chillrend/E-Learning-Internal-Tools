@@ -3,6 +3,7 @@ const router = express.Router();
 const authController = require('../controllers/auth_controller');
 const exportController = require('../controllers/export_controller');
 const courseController = require('../controllers/course_controller');
+const healthController = require('../controllers/health_controller');
 const checkSession = require('../middleware/session_check');
 
 router.get('/', authController.index);
@@ -15,6 +16,10 @@ router.post('/export', checkSession, exportController.exportData);
 router.get('/export/createcat', checkSession, exportController.createCategory);
 router.post('/export/dryrun', checkSession, exportController.renderDryRunPage);
 router.post('/export/run', checkSession, exportController.createCourses);
+
+// Health check routes
+router.get('/health', checkSession, healthController.renderHealthPage);
+router.get('/health/test', checkSession, healthController.runTests);
 
 // Course management routes
 router.get('/courses', checkSession, courseController.dashboard);
