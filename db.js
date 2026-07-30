@@ -37,6 +37,7 @@ db.exec(`
         nama_kelas             TEXT    NOT NULL,
         enrolment_key_dosen    TEXT    NOT NULL,
         enrolment_key_mhs      TEXT    NOT NULL,
+        rps_file_path          TEXT,
         created_at             TEXT    DEFAULT (datetime('now'))
     );
 
@@ -60,9 +61,38 @@ db.exec(`
         enrolment_key_mhs      TEXT,
         moodle_course_id       INTEGER,
         status                 TEXT    DEFAULT 'success',
-        error_message          TEXT
+        error_message          TEXT,
+        rps_file_path          TEXT,
+        rps_status             TEXT,
+        rps_error_message      TEXT
     );
 `);
+
+// --- Migrations for existing databases ---
+try {
+    db.exec(`ALTER TABLE staged_courses ADD COLUMN rps_file_path TEXT`);
+} catch (e) {
+    // Column already exists
+}
+
+try {
+    db.exec(`ALTER TABLE deployed_courses ADD COLUMN rps_status TEXT`);
+} catch (e) {
+    // Column already exists
+}
+
+try {
+    db.exec(`ALTER TABLE deployed_courses ADD COLUMN rps_error_message TEXT`);
+} catch (e) {
+    // Column already exists
+}
+
+try {
+    db.exec(`ALTER TABLE deployed_courses ADD COLUMN rps_file_path TEXT`);
+} catch (e) {
+    // Column already exists
+}
+
 
 // --- Seed data ---
 const JURUSAN_LIST = [

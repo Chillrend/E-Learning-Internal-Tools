@@ -5,6 +5,16 @@ const exportController = require('../controllers/export_controller');
 const courseController = require('../controllers/course_controller');
 const healthController = require('../controllers/health_controller');
 const checkSession = require('../middleware/session_check');
+const upload = require('../middleware/upload');
+
+const handleRpsUpload = (req, res, next) => {
+    upload.single('rps_file')(req, res, (err) => {
+        if (err) {
+            return res.status(400).send(`Upload Error: ${err.message}`);
+        }
+        next();
+    });
+};
 
 router.get('/', authController.index);
 router.get('/login/redirect', authController.loginRedirect);
@@ -26,7 +36,8 @@ router.get('/health/test', checkSession, healthController.runTests);
 router.get('/courses', checkSession, courseController.dashboard);
 router.get('/courses/:categoryId', checkSession, courseController.showCategory);
 router.get('/courses/:categoryId/add', checkSession, courseController.renderAddForm);
-router.post('/courses/:categoryId/add', checkSession, courseController.addCourses);
+router.post('/courses/:categoryId/add', checkSession, handleRpsUpload, courseController.addCourses);
+
 router.post('/courses/:categoryId/delete/:id', checkSession, courseController.deleteStagedCourse);
 router.get('/courses/:categoryId/deploy', checkSession, courseController.renderDeployPage);
 router.post('/courses/:categoryId/deploy', checkSession, courseController.deployCourses);

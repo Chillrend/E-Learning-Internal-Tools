@@ -64,3 +64,52 @@ exports.createCourseCategory = async (name,parent, description = `Kategori untuk
     const response = await makeMoodleRequest('core_course_create_categories', params);
     return response[0].id;
 };
+
+const FormData = require('form-data');
+const fs = require('fs');
+
+exports.uploadFileToMoodle = async (filePath, fileName) => {
+    const uploadUrl = `${MOODLE_BASE_URL}/webservice/upload.php`;
+    const form = new FormData();
+    form.append('file', fs.createReadStream(filePath), fileName);
+
+    try {
+        const response = await axios.post(uploadUrl, form, {
+            params: {
+                token: token
+            },
+            headers: {
+                ...form.getHeaders()
+            },
+            httpsAgent: agent
+        });
+
+        if (Array.isArray(response.data) && response.data.length > 0) {
+            return response.data[0]; // returns object containing itemid, etc.
+        } else {
+            console.error('Unexpected response from Moodle file upload:', response.data);
+            return false;
+        }
+    } catch (error) {
+        console.error('Error uploading file to Moodle:', error.response ? error.response.data : error.message);
+        throw error;
+    }
+};
+
+exports.createFileResource = async (courseId, name, draftItemId, section = 0) => {
+    const params = {
+        courseid: courseId,
+        name: name,
+        draftitemid: draftItemId,
+        section: section
+    };
+
+    const response = await makeMoodleRequest('local_rps_create_file_resource', params);
+
+    if (response && response.cmid) {
+        return response;
+    } else {
+        console.error('Failed creating file resource activity:', response);
+        return false;
+    }
+};

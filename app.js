@@ -7,6 +7,14 @@ const logger = require('morgan');
 const hbs = require('hbs');
 const env = require('dotenv').config();
 
+const fs = require('fs');
+
+// Ensure upload directories exist
+const RPS_DIR = path.join(__dirname, 'uploads', 'rps');
+if (!fs.existsSync(RPS_DIR)) {
+    fs.mkdirSync(RPS_DIR, { recursive: true });
+}
+
 // Initialize SQLite database (runs schema + seed on first load)
 require('./db');
 

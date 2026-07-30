@@ -1,11 +1,13 @@
 const db = require('../db');
+const fs = require('fs');
+const path = require('path');
 const { customAlphabet } = require('nanoid');
 const generateEnrolmentKey = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', 8);
-const { createCourse } = require('./utils/moodle.utils');
-const { createCourseCategory } = require('./utils/moodle.utils');
+const { createCourse, createCourseCategory, uploadFileToMoodle, createFileResource } = require('./utils/moodle.utils');
 const { createSelfEnrollment } = require('./utils/moodle_db.utils');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit-table');
+
 
 // --- Helpers ---
 
@@ -120,15 +122,16 @@ exports.addCourses = (req, res) => {
     if (!category) return res.status(404).send('Category not found');
 
     const { mata_kuliah, nama_kelas_pattern, generate_multiple, class_count } = req.body;
+    const rpsFilePath = req.file ? req.file.path : null;
 
     const insert = db.prepare(`
-        INSERT INTO staged_courses (category_id, mata_kuliah, nama_kelas, enrolment_key_dosen, enrolment_key_mhs)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO staged_courses (category_id, mata_kuliah, nama_kelas, enrolment_key_dosen, enrolment_key_mhs, rps_file_path)
+        VALUES (?, ?, ?, ?, ?, ?)
     `);
 
     const insertMany = db.transaction((courses) => {
         for (const course of courses) {
-            insert.run(categoryId, course.mata_kuliah, course.nama_kelas, course.key_dosen, course.key_mhs);
+            insert.run(categoryId, course.mata_kuliah, course.nama_kelas, course.key_dosen, course.key_mhs, rpsFilePath);
         }
     });
 
@@ -167,10 +170,23 @@ exports.deleteStagedCourse = (req, res) => {
     const categoryId = parseInt(req.params.categoryId);
     const courseId = parseInt(req.params.id);
 
+    const staged = db.prepare('SELECT rps_file_path FROM staged_courses WHERE id = ? AND category_id = ?').get(courseId, categoryId);
     db.prepare('DELETE FROM staged_courses WHERE id = ? AND category_id = ?').run(courseId, categoryId);
+
+    if (staged && staged.rps_file_path) {
+        const count = db.prepare('SELECT COUNT(*) as count FROM staged_courses WHERE rps_file_path = ?').get(staged.rps_file_path).count;
+        if (count === 0 && fs.existsSync(staged.rps_file_path)) {
+            try {
+                fs.unlinkSync(staged.rps_file_path);
+            } catch (e) {
+                console.error('Error deleting RPS file:', e.message);
+            }
+        }
+    }
 
     res.redirect(`/courses/${categoryId}`);
 };
+
 
 // --- Deploy page (dry-run) ---
 
@@ -280,8 +296,8 @@ exports.deployCourses = async (req, res) => {
 // Add background processing function
 async function processDeploymentBackground(deploymentId, category, stagedCourses, startTimestamp) {
     const insertDeployed = db.prepare(`
-        INSERT INTO deployed_courses (deployment_id, mata_kuliah, nama_kelas, enrolment_key_dosen, enrolment_key_mhs, moodle_course_id, status, error_message)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO deployed_courses (deployment_id, mata_kuliah, nama_kelas, enrolment_key_dosen, enrolment_key_mhs, moodle_course_id, status, error_message, rps_file_path, rps_status, rps_error_message)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const updateDeployment = db.prepare(`
@@ -302,7 +318,9 @@ async function processDeploymentBackground(deploymentId, category, stagedCourses
             enrolment_key_mhs: staged.enrolment_key_mhs,
             status: 'success',
             moodle_course_id: null,
-            error_message: null
+            error_message: null,
+            rps_status: null,
+            rps_error_message: null
         };
 
         const semester = getSemester();
@@ -339,6 +357,38 @@ async function processDeploymentBackground(deploymentId, category, stagedCourses
                 if (!studentEnrol) {
                     result.error_message = (result.error_message || '') + 'Student enrolment failed. ';
                 }
+
+                // Upload & Create RPS file activity if RPS file is attached
+                if (staged.rps_file_path && fs.existsSync(staged.rps_file_path)) {
+                    try {
+                        const ext = path.extname(staged.rps_file_path);
+                        const rpsFileName = `RPS - ${staged.mata_kuliah}${ext}`;
+                        const uploadRes = await uploadFileToMoodle(staged.rps_file_path, rpsFileName);
+
+                        if (uploadRes && uploadRes.itemid) {
+                            const resourceRes = await createFileResource(
+                                moodleCourseId,
+                                `RPS - ${staged.mata_kuliah}`,
+                                uploadRes.itemid,
+                                0 // Section 0 (General)
+                            );
+
+                            if (resourceRes && resourceRes.cmid) {
+                                result.rps_status = 'success';
+                            } else {
+                                result.rps_status = 'failed';
+                                result.rps_error_message = 'Failed to create RPS activity on Moodle (local_rps plugin response invalid)';
+                            }
+                        } else {
+                            result.rps_status = 'failed';
+                            result.rps_error_message = 'Failed to upload RPS file to Moodle draft area';
+                        }
+                    } catch (rpsErr) {
+                        result.rps_status = 'failed';
+                        result.rps_error_message = rpsErr.message || 'Unknown error during RPS upload';
+                        console.error('[Deployment] RPS Upload Error:', rpsErr);
+                    }
+                }
             }
         } catch (err) {
             result.status = 'failed';
@@ -356,7 +406,10 @@ async function processDeploymentBackground(deploymentId, category, stagedCourses
             result.enrolment_key_mhs,
             result.moodle_course_id,
             result.status,
-            result.error_message
+            result.error_message,
+            staged.rps_file_path || null,
+            result.rps_status,
+            result.rps_error_message
         );
 
         // Delete from staged_courses
@@ -366,8 +419,34 @@ async function processDeploymentBackground(deploymentId, category, stagedCourses
         updateDeployment.run(deploymentId);
     }
 
+    cleanupOrphanRpsFiles();
+
     finishDeployment.run(failedAny ? 'completed_with_errors' : 'completed', deploymentId);
 }
+
+function cleanupOrphanRpsFiles() {
+    try {
+        const stagedRows = db.prepare('SELECT DISTINCT rps_file_path FROM staged_courses WHERE rps_file_path IS NOT NULL').all();
+        const deployedRows = db.prepare('SELECT DISTINCT rps_file_path FROM deployed_courses WHERE rps_file_path IS NOT NULL').all();
+        const activeFiles = new Set([
+            ...stagedRows.map(r => r.rps_file_path),
+            ...deployedRows.map(r => r.rps_file_path)
+        ]);
+        const dir = path.join(__dirname, '../uploads/rps');
+        if (fs.existsSync(dir)) {
+            const files = fs.readdirSync(dir);
+            for (const file of files) {
+                const fullPath = path.join(dir, file);
+                if (!activeFiles.has(fullPath)) {
+                    fs.unlinkSync(fullPath);
+                }
+            }
+        }
+    } catch (e) {
+        console.error('Error cleaning up orphan RPS files:', e.message);
+    }
+}
+
 
 // --- Edit category ---
 
@@ -511,16 +590,18 @@ exports.deploymentStatus = (req, res) => {
 exports.reuseDeployment = (req, res) => {
     const deploymentId = parseInt(req.params.deploymentId);
     const categoryId = parseInt(req.params.categoryId);
-    const courses = db.prepare('SELECT mata_kuliah, nama_kelas, enrolment_key_dosen, enrolment_key_mhs FROM deployed_courses WHERE deployment_id = ?').all(deploymentId);
+    const courses = db.prepare('SELECT mata_kuliah, nama_kelas, enrolment_key_dosen, enrolment_key_mhs, rps_file_path FROM deployed_courses WHERE deployment_id = ?').all(deploymentId);
     
     if (courses.length > 0) {
         const insert = db.prepare(`
-            INSERT INTO staged_courses (category_id, mata_kuliah, nama_kelas, enrolment_key_dosen, enrolment_key_mhs)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO staged_courses (category_id, mata_kuliah, nama_kelas, enrolment_key_dosen, enrolment_key_mhs, rps_file_path)
+            VALUES (?, ?, ?, ?, ?, ?)
         `);
         const insertMany = db.transaction((coursesToInsert) => {
             for (const course of coursesToInsert) {
-                insert.run(categoryId, course.mata_kuliah, course.nama_kelas, course.enrolment_key_dosen, course.enrolment_key_mhs);
+                // Only carry rps_file_path if the file still exists on disk
+                const rpsPath = (course.rps_file_path && fs.existsSync(course.rps_file_path)) ? course.rps_file_path : null;
+                insert.run(categoryId, course.mata_kuliah, course.nama_kelas, course.enrolment_key_dosen, course.enrolment_key_mhs, rpsPath);
             }
         });
         insertMany(courses);
@@ -536,6 +617,7 @@ exports.deleteBatchStagedCourses = (req, res) => {
         if (idList.length > 0) {
             const placeholders = idList.map(() => '?').join(',');
             db.prepare(`DELETE FROM staged_courses WHERE category_id = ? AND id IN (${placeholders})`).run(categoryId, ...idList);
+            cleanupOrphanRpsFiles();
         }
     }
     res.redirect(`/courses/${categoryId}`);
@@ -544,8 +626,10 @@ exports.deleteBatchStagedCourses = (req, res) => {
 exports.deleteAllStagedCourses = (req, res) => {
     const categoryId = parseInt(req.params.categoryId);
     db.prepare('DELETE FROM staged_courses WHERE category_id = ?').run(categoryId);
+    cleanupOrphanRpsFiles();
     res.redirect(`/courses/${categoryId}`);
 };
+
 
 exports.exportDeployment = async (req, res) => {
     const deploymentId = parseInt(req.params.deploymentId);

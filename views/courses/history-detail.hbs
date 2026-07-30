@@ -114,6 +114,7 @@
                         <th class="px-6 py-3 border-b border-slate-800">Key Dosen</th>
                         <th class="px-6 py-3 border-b border-slate-800">Key Mahasiswa</th>
                         <th class="px-6 py-3 border-b border-slate-800">Status</th>
+                        <th class="px-6 py-3 border-b border-slate-800">RPS Status</th>
                         <th class="px-6 py-3 border-b border-slate-800">Moodle</th>
                     </tr>
                 </thead>
@@ -137,6 +138,23 @@
                             </span>
                             {{/ifEquals}}
                         </td>
+                        <td class="px-6 py-3">
+                            {{#ifEquals this.rps_status "success"}}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-400/10 text-emerald-400 border border-emerald-400/20">
+                                Uploaded
+                            </span>
+                            {{else}}
+                                {{#ifEquals this.rps_status "failed"}}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-400/10 text-red-400 border border-red-400/20"
+                                      title="{{this.rps_error_message}}">
+                                    Failed
+                                </span>
+                                {{else}}
+                                <span class="text-slate-600">—</span>
+                                {{/ifEquals}}
+                            {{/ifEquals}}
+                        </td>
+
                         <td class="px-6 py-3 text-sm">
                             {{#if this.moodle_course_id}}
                             <a href="{{MOODLE_BASE_URL}}/course/view.php?id={{this.moodle_course_id}}" target="_blank"
